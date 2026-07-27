@@ -1,149 +1,261 @@
 import { useState, useMemo } from "react";
 import type { Expense, Category } from "./types";
-import { Header } from "./components/Header";
-import { HeroCard } from "./components/HeroCard";
-import { StatRow } from "./components/StatRow";
-import { EntryForm } from "./components/EntryForm";
-import { TabControl } from "./components/TabControl";
-import type { ViewTab } from "./components/TabControl";
-import { TransactionList } from "./components/TransactionList";
-import { Footer } from "./components/Footer";
+import { CATEGORIES } from "./types";
+import { fmt, todayISO, formatHeaderDate, getFilteredExpenses } from "./utils";
 
-const getTodayISO = () => new Date().toISOString().split("T")[0];
+type Tab = "daily" | "monthly";
 
 const INITIAL_EXPENSES: Expense[] = [
   {
     id: "exp-1",
-    date: getTodayISO(),
+    date: todayISO(),
     category: "Food",
-    amount: 1450,
-    note: "Lunch at Bistro",
+    amount: 100,
+    note: "eat",
   },
   {
     id: "exp-2",
-    date: getTodayISO(),
+    date: todayISO(),
     category: "Transport",
     amount: 350,
-    note: "Uber ride to office",
+    note: "bus ticket",
   },
   {
     id: "exp-3",
     date: "2026-07-25",
     category: "Utilities",
     amount: 4200,
-    note: "Electricity & Internet",
-  },
-  {
-    id: "exp-4",
-    date: "2026-07-20",
-    category: "Rent",
-    amount: 15000,
-    note: "July Apartment Rent",
-  },
-  {
-    id: "exp-5",
-    date: "2026-07-15",
-    category: "Health",
-    amount: 1850,
-    note: "Pharmacy & Checkup",
-  },
-  {
-    id: "exp-6",
-    date: "2026-07-10",
-    category: "Other",
-    amount: 920,
-    note: "Books & Stationery",
+    note: "electricity bill",
   },
 ];
 
 export function App() {
   const [expenses, setExpenses] = useState<Expense[]>(INITIAL_EXPENSES);
-  const [activeTab, setActiveTab] = useState<ViewTab>("daily");
+  const [activeTab, setActiveTab] = useState<Tab>("daily");
 
-  const addExpense = (newExp: {
-    category: Category;
-    amount: number;
-    date: string;
-    note?: string;
-  }) => {
-    const expenseItem: Expense = {
-      id: `exp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      ...newExp,
+  // Form states
+  const [date, setDate] = useState<string>(todayISO());
+  const [category, setCategory] = useState<Category>("Food");
+  const [amount, setAmount] = useState<string>("");
+  const [note, setNote] = useState<string>("");
+
+  const today = todayISO();
+  const currentMonth = today.slice(0, 7);
+
+  // Computations
+  const todaysExpenses = useMemo(
+    () => expenses.filter((e) => e.date === today),
+    [expenses, today]
+  );
+
+  const todayTotal = useMemo(
+    () => todaysExpenses.reduce((s, e) => s + e.amount, 0),
+    [todaysExpenses]
+  );
+
+  const monthTotal = useMemo(
+    () =>
+      expenses
+        .filter((e) => e.date.slice(0, 7) === currentMonth)
+        .reduce((s, e) => s + e.amount, 0),
+    [expenses, currentMonth]
+  );
+
+  const visibleExpenses = useMemo(
+    () => getFilteredExpenses(expenses, activeTab),
+    [expenses, activeTab]
+  );
+
+  const displayTotal = activeTab === "daily" ? todayTotal : monthTotal;
+
+  const handleAddEntry = (e: React.FormEvent) => {
+    e.preventDefault();
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) return;
+
+    const newEntry: Expense = {
+      id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      date: date || todayISO(),
+      category,
+      amount: numAmount,
+      note: note.trim() ? note.trim() : undefined,
     };
-    setExpenses((prev) => [expenseItem, ...prev]);
+
+    setExpenses((prev) => [newEntry, ...prev]);
+    setAmount("");
+    setNote("");
   };
 
-  const deleteExpense = (id: string) => {
-    setExpenses((prev) => prev.filter((exp) => exp.id !== id));
+  const handleRemoveEntry = (id: string) => {
+    setExpenses((prev) => prev.filter((item) => item.id !== id));
   };
-
-  // Reactive metrics calculations
-  const { monthTotal, todayTotal, avgPerDay, todayCount, totalCount } =
-    useMemo(() => {
-      const todayStr = getTodayISO();
-      const currentMonthStr = todayStr.substring(0, 7);
-      const currentDayOfMonth = new Date().getDate();
-
-      let mTotal = 0;
-      let tTotal = 0;
-      let tCount = 0;
-
-      for (const exp of expenses) {
-        if (exp.date === todayStr) {
-          tTotal += exp.amount;
-          tCount += 1;
-        }
-        if (exp.date.startsWith(currentMonthStr)) {
-          mTotal += exp.amount;
-        }
-      }
-
-      const avg = currentDayOfMonth > 0 ? mTotal / currentDayOfMonth : 0;
-
-      return {
-        monthTotal: mTotal,
-        todayTotal: tTotal,
-        avgPerDay: avg,
-        todayCount: tCount,
-        totalCount: expenses.length,
-      };
-    }, [expenses]);
 
   return (
-    <div className="min-h-screen bg-[#0B0D10] text-[#F3F4F6] selection:bg-[#4C7DFF] selection:text-white font-inter">
-      {/* Centered layout container max-width 480px */}
-      <div className="max-w-[480px] mx-auto px-4 py-4 sm:py-6 flex flex-col min-h-screen">
-        {/* 1. Header */}
-        <Header />
+    <div className="receipt">
+      {/* Brand Header */}
+      <div className="brand">
+        <div className="name">LEDGER</div>
+        <div className="sub">Personal expense record</div>
+      </div>
 
-        {/* 2. Hero Card */}
-        <HeroCard
-          monthTotal={monthTotal}
-          todayTotal={todayTotal}
-          avgPerDay={avgPerDay}
-        />
+      <hr className="dash" />
 
-        {/* 3. Stat Row */}
-        <StatRow todayCount={todayCount} totalCount={totalCount} />
+      {/* Metadata Lines */}
+      <div className="meta-line">
+        <span>DATE</span>
+        <span>{formatHeaderDate()}</span>
+      </div>
+      <div className="meta-line">
+        <span>ENTRIES TODAY</span>
+        <span>{todaysExpenses.length}</span>
+      </div>
 
-        {/* 4. New Entry Form Card */}
-        <EntryForm onAddExpense={addExpense} />
+      {/* Totals */}
+      <div className="totals">
+        <div className="total-row">
+          <span>Subtotal today</span>
+          <span className="amt">{fmt(todayTotal)}</span>
+        </div>
+        <div className="total-row grand">
+          <span>Total this month</span>
+          <span className="amt">{fmt(monthTotal)}</span>
+        </div>
+      </div>
 
-        {/* 5. Segmented Pill Tab Control */}
-        <TabControl activeTab={activeTab} onTabChange={setActiveTab} />
+      <hr className="dash" />
 
-        {/* 6. Transaction List */}
-        <div className="flex-1">
-          <TransactionList
-            expenses={expenses}
-            activeTab={activeTab}
-            onDeleteExpense={deleteExpense}
+      {/* New Entry Form */}
+      <div className="section-label">— New entry —</div>
+
+      <form onSubmit={handleAddEntry}>
+        <div className="row2">
+          <div className="field">
+            <label htmlFor="in-date">Date</label>
+            <input
+              id="in-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="in-cat">Category</label>
+            <select
+              id="in-cat"
+              value={category}
+              onChange={(e) => setCategory(e.target.value as Category)}
+            >
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="in-amount">Amount</label>
+          <div className="amt-wrap">
+            <span>Rs.</span>
+            <input
+              id="in-amount"
+              className="amt-in"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="in-note">Note (optional)</label>
+          <input
+            id="in-note"
+            type="text"
+            placeholder="What was it for?"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
           />
         </div>
 
-        {/* 7. Footer */}
-        <Footer entryCount={totalCount} />
+        <button
+          type="submit"
+          className="btn-print"
+          disabled={!amount || parseFloat(amount) <= 0}
+        >
+          Print entry
+        </button>
+      </form>
+
+      {/* Tabs */}
+      <div className="tabs">
+        <button
+          type="button"
+          className={`tab ${activeTab === "daily" ? "active" : ""}`}
+          onClick={() => setActiveTab("daily")}
+        >
+          Daily
+        </button>
+        <button
+          type="button"
+          className={`tab ${activeTab === "monthly" ? "active" : ""}`}
+          onClick={() => setActiveTab("monthly")}
+        >
+          Monthly
+        </button>
       </div>
+
+      {/* Items Section */}
+      <div className="section-label" style={{ marginTop: "20px" }}>
+        — {activeTab === "daily" ? "Today's items" : "This Month's items"} —
+      </div>
+
+      <div className="items">
+        {visibleExpenses.length === 0 ? (
+          <div className="empty">
+            {activeTab === "daily"
+              ? "No entries today."
+              : "No entries this month."}
+          </div>
+        ) : (
+          visibleExpenses.map((e) => (
+            <div className="item" key={e.id}>
+              <div className="name">
+                {e.category}
+                {e.note && <span className="note">{e.note}</span>}
+              </div>
+              <div className="amt">{fmt(e.amount)}</div>
+              <button
+                type="button"
+                className="del"
+                onClick={() => handleRemoveEntry(e.id)}
+                title="Delete entry"
+                aria-label="Delete entry"
+              >
+                ✕
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Stamp Total */}
+      <div className="stamp-total">
+        <div className="lbl">Balance due</div>
+        <div className="val">{fmt(displayTotal)}</div>
+      </div>
+
+      {/* Barcode */}
+      <div className="barcode"></div>
+
+      {/* Footer */}
+      <div className="footer-txt">
+        {expenses.length} {expenses.length === 1 ? "entry logged" : "entries logged"}
+      </div>
+      <div className="footer-txt small">All data stored locally · thank you</div>
     </div>
   );
 }
