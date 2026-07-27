@@ -1,0 +1,39 @@
+{
+  "name": "expense-tracker",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run dev:frontend\"",
+    "dev:frontend": "vite --config frontend/vite.config.ts",
+    "server": "tsx backend/index.ts",
+    "build": "tsc -b && vite build --config frontend/vite.config.ts",
+    "lint": "oxlint",
+    "preview": "vite preview --config frontend/vite.config.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.8.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/sqlite3": "^3.1.11",
+    "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^10.0.4",
+    "oxlint": "^1.71.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1"
+  }
+}
