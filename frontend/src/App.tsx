@@ -25,7 +25,6 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("daily");
-  const [activeNav, setActiveNav] = useState<"home" | "transactions">("home");
   const [sheet, setSheet] = useState<Sheet>("none");
 
   // Salary
@@ -45,7 +44,6 @@ export function App() {
   const currentMonth = today.slice(0, 7);
 
   // ── Month display for header ─────────────────────────────────────────
-  const monthName = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   useEffect(() => {
     fetchExpenses()
@@ -156,8 +154,6 @@ export function App() {
   }
 
   // ── Format short currency ────────────────────────────────────────────
-  const fmtShort = (n: number) =>
-    "Rs. " + n.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // ── Render ───────────────────────────────────────────────────────────
   return (
@@ -165,274 +161,96 @@ export function App() {
       {/* ── Scrollable content ─────────────────────────────────── */}
       <div className="scroll-area">
 
-        {/* Top Bar */}
-        <div className="topbar">
-          <div className="topbar-greeting">
-            <span className="topbar-hello">Good {getGreeting()},</span>
-            <span className="topbar-name">My Finances</span>
-          </div>
-          <div className="topbar-avatar">💰</div>
-        </div>
-
-        {/* Balance Card */}
+        {/* ── Balance Card ────────────────────────────────────────── */}
         <div className="balance-card">
-          <div className="balance-label">
-            {salary > 0 ? "Balance Remaining" : "Spent This Month"}
-          </div>
+          <div className="balance-label">Balance Remaining</div>
           <div className="balance-amount">
             <span className="currency">Rs.</span>
-            {salary > 0
-              ? Math.abs(remaining!).toLocaleString("en-LK", { minimumFractionDigits: 2 })
-              : monthTotal.toLocaleString("en-LK", { minimumFractionDigits: 2 })
-            }
+            {remaining !== null ? remaining.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
           </div>
 
           <div className="balance-row">
             <div className="balance-stat">
               <span className="bs-label">Spent</span>
-              <span className="bs-val">
-                {monthTotal.toLocaleString("en-LK", { minimumFractionDigits: 0 })}
-              </span>
+              <span className="bs-val">{monthTotal.toLocaleString("en-LK")}</span>
             </div>
-            {salary > 0 && (
-              <div className="balance-stat">
-                <span className="bs-label">Salary</span>
-                <span className="bs-val">
-                  {salary.toLocaleString("en-LK", { minimumFractionDigits: 0 })}
-                </span>
-              </div>
-            )}
+            <div className="balance-stat">
+              <span className="bs-label">Salary</span>
+              <span className="bs-val">{salary > 0 ? salary.toLocaleString("en-LK") : "0"}</span>
+            </div>
             <div className="balance-stat">
               <span className="bs-label">Today</span>
-              <span className="bs-val">
-                {todayTotal.toLocaleString("en-LK", { minimumFractionDigits: 0 })}
-              </span>
+              <span className="bs-val">{todayTotal.toLocaleString("en-LK")}</span>
             </div>
           </div>
 
-          {/* Budget bar on card */}
-          {salary > 0 && (
-            <div className="card-budget-bar">
-              <div className="card-budget-bar-track">
-                <div
-                  className={`card-budget-bar-fill ${barClass}`}
-                  style={{ width: `${spentPct}%` }}
-                />
-              </div>
-              <div className="card-budget-pct">
-                {isOverBudget
-                  ? `⚠ ${spentPct.toFixed(0)}% — Over budget`
-                  : `${spentPct.toFixed(0)}% of salary used`}
-              </div>
+          <div className="card-budget-bar">
+            <div className="card-budget-bar-track">
+              <div 
+                className={`card-budget-bar-fill ${barClass}`} 
+                style={{ width: `${spentPct}%` }}
+              />
             </div>
-          )}
-
-          {/* No salary CTA */}
-          {salary === 0 && (
-            <button
-              id="btn-set-salary-card"
-              type="button"
-              className="no-salary-cta"
-              onClick={openSalary}
-            >
-              <span>💼</span>
-              <span className="no-salary-cta-text">Set your monthly salary to track budget</span>
-              <span className="no-salary-cta-arrow">›</span>
-            </button>
-          )}
+            <div className="card-budget-pct">
+              {Math.round(spentPct)}% of salary used
+            </div>
+          </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="quick-actions">
-          <button type="button" className="qa-btn" id="qa-add" onClick={openAdd}>
-            <div className="qa-icon">➕</div>
-            <span className="qa-label">Add</span>
-          </button>
-          <button type="button" className="qa-btn" id="qa-salary" onClick={openSalary}>
-            <div className="qa-icon">💼</div>
-            <span className="qa-label">Salary</span>
-          </button>
-          <button type="button" className="qa-btn" id="qa-monthly"
-            onClick={() => { setActiveNav("transactions"); setActiveTab("monthly"); }}>
-            <div className="qa-icon">📅</div>
-            <span className="qa-label">Monthly</span>
-          </button>
-          <button type="button" className="qa-btn" id="qa-today"
-            onClick={() => { setActiveNav("transactions"); setActiveTab("daily"); }}>
-            <div className="qa-icon">📊</div>
-            <span className="qa-label">Today</span>
-          </button>
-        </div>
+        {/* ── TRANSACTIONS VIEW (Visible below card) ───────────────── */}
+        <div style={{ marginTop: 24 }}>
+          <div className="section-header">
+            <span className="section-title">Transactions</span>
+          </div>
 
-        {/* ── HOME VIEW ─────────────────────────────────────────── */}
-        {activeNav === "home" && (
-          <>
-            {/* Recent Transactions */}
-            <div className="section-header">
-              <span className="section-title">Recent</span>
-              <button
-                type="button"
-                className="section-link"
-                onClick={() => setActiveNav("transactions")}
-              >
-                See all
-              </button>
-            </div>
-
-            <div className="txn-list">
-              {expenses.slice(0, 5).length === 0 ? (
-                <div className="txn-empty">
-                  <div className="txn-empty-icon">📭</div>
-                  <span>No transactions yet</span>
+          <div className="txn-list">
+            {visibleExpenses.length === 0 ? (
+              <div className="txn-empty">
+                <div className="txn-empty-icon">
+                  {activeTab === "daily" ? "☀️" : "📅"}
                 </div>
-              ) : (
-                expenses.slice(0, 5).map((e) => (
-                  <TxnRow key={e.id} expense={e} onDelete={handleDelete} />
-                ))
-              )}
-            </div>
-
-            {/* Budget Overview */}
-            {salary > 0 && (
-              <>
-                <div className="section-header" style={{ paddingTop: "28px" }}>
-                  <span className="section-title">{monthName} Budget</span>
-                  <button type="button" className="section-link" onClick={openSalary}>
-                    Edit
-                  </button>
-                </div>
-
-                <div className="budget-overview-card">
-                  <div className="bov-salary">{fmtShort(salary)}</div>
-                  <div className="bov-bar-track">
-                    <div
-                      className={`bov-bar-fill ${barClass}`}
-                      style={{ width: `${spentPct}%` }}
-                    />
-                  </div>
-                  <div className="bov-stats">
-                    <div className="bov-stat">
-                      <span className="bov-stat-label">Spent</span>
-                      <span className="bov-stat-val white">{fmtShort(monthTotal)}</span>
-                    </div>
-                    <div className="bov-stat">
-                      <span className="bov-stat-label">Used</span>
-                      <span className={`bov-stat-val ${barClass === "safe" ? "green" : barClass === "warn" ? "orange" : "red"}`}>
-                        {spentPct.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="bov-stat">
-                      <span className="bov-stat-label">{isOverBudget ? "Over by" : "Left"}</span>
-                      <span className={`bov-stat-val ${isOverBudget ? "red" : "green"}`}>
-                        {fmtShort(Math.abs(remaining!))}
-                      </span>
-                    </div>
-                  </div>
-                  {isOverBudget && (
-                    <div className="bov-over-pill">⚠ You've exceeded your budget this month</div>
-                  )}
-                </div>
-              </>
+                <span>
+                  {activeTab === "daily" ? "No expenses today" : "No expenses this month"}
+                </span>
+              </div>
+            ) : (
+              visibleExpenses.map((e) => (
+                <TxnRow key={e.id} expense={e} onDelete={handleDelete} />
+              ))
             )}
-
-            <div style={{ height: 24 }} />
-          </>
-        )}
-
-        {/* ── TRANSACTIONS VIEW ─────────────────────────────────── */}
-        {activeNav === "transactions" && (
-          <>
-            <div className="section-header">
-              <span className="section-title">Transactions</span>
-            </div>
-
-            {/* Tab Pills */}
-            <div className="tab-pills">
-              <button
-                type="button"
-                id="tab-daily"
-                className={`tab-pill ${activeTab === "daily" ? "active" : ""}`}
-                onClick={() => setActiveTab("daily")}
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                id="tab-monthly"
-                className={`tab-pill ${activeTab === "monthly" ? "active" : ""}`}
-                onClick={() => setActiveTab("monthly")}
-              >
-                This Month
-              </button>
-            </div>
-
-            {/* Summary pill */}
-            <div className="month-pill">
-              <span className="mp-label">
-                {activeTab === "daily" ? "Today's total" : `${monthName} total`}
-              </span>
-              <span className="mp-value">
-                {fmtShort(activeTab === "daily" ? todayTotal : monthTotal)}
-              </span>
-            </div>
-
-            <div className="txn-list">
-              {visibleExpenses.length === 0 ? (
-                <div className="txn-empty">
-                  <div className="txn-empty-icon">
-                    {activeTab === "daily" ? "☀️" : "📅"}
-                  </div>
-                  <span>
-                    {activeTab === "daily" ? "No expenses today" : "No expenses this month"}
-                  </span>
-                </div>
-              ) : (
-                visibleExpenses.map((e) => (
-                  <TxnRow key={e.id} expense={e} onDelete={handleDelete} />
-                ))
-              )}
-            </div>
-
-            <div style={{ height: 24 }} />
-          </>
-        )}
+          </div>
+          <div style={{ height: 24 }} />
+        </div>
       </div>
 
-      {/* ── Bottom Nav ─────────────────────────────────────────── */}
-      <nav className="bottom-nav">
-        <button
-          type="button"
-          id="nav-home"
-          className={`nav-item ${activeNav === "home" ? "active" : ""}`}
-          onClick={() => setActiveNav("home")}
-        >
-          <span className="nav-icon">🏠</span>
-          <span className="nav-label">Home</span>
-        </button>
-
-        <div className="nav-spacer" />
-
-        <button
-          type="button"
-          id="nav-txn"
-          className={`nav-item ${activeNav === "transactions" ? "active" : ""}`}
-          onClick={() => setActiveNav("transactions")}
-        >
-          <span className="nav-icon">📋</span>
-          <span className="nav-label">Transactions</span>
-        </button>
-      </nav>
-
       {/* ── FAB ────────────────────────────────────────────────── */}
-      <button
-        type="button"
-        id="fab-add"
-        className={`fab ${sheet === "add" ? "open" : ""}`}
-        onClick={() => (sheet === "add" ? setSheet("none") : openAdd())}
-        aria-label="Add expense"
-      >
-        <span className="fab-icon">+</span>
-      </button>
+      {/* ── Bottom Nav ─────────────────────────────────────────── */}
+      <div className="bottom-nav">
+        <button className="nav-item" onClick={() => openAdd()}>
+          <div className="nav-icon">
+            <img src="/icons/add.png" alt="Add" width={28} height={28} onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerHTML = '➕'; }} />
+          </div>
+          <span className="nav-label">Add</span>
+        </button>
+        <button className="nav-item" onClick={() => openSalary()}>
+          <div className="nav-icon">
+            <img src="/icons/salary.png" alt="Salary" width={28} height={28} onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerHTML = '💼'; }} />
+          </div>
+          <span className="nav-label">Salary</span>
+        </button>
+        <button className={`nav-item ${activeTab === 'monthly' ? 'active' : ''}`} onClick={() => setActiveTab("monthly")}>
+          <div className="nav-icon">
+            <img src="/icons/monthly.png" alt="Monthly" width={28} height={28} onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerHTML = '📅'; }} />
+          </div>
+          <span className="nav-label">Monthly</span>
+        </button>
+        <button className={`nav-item ${activeTab === 'daily' ? 'active' : ''}`} onClick={() => setActiveTab("daily")}>
+          <div className="nav-icon">
+            <img src="/icons/today.png" alt="Today" width={28} height={28} onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerHTML = '📊'; }} />
+          </div>
+          <span className="nav-label">Today</span>
+        </button>
+      </div>
 
       {/* ── Add Expense Sheet ───────────────────────────────────── */}
       {sheet === "add" && (
@@ -592,12 +410,6 @@ function TxnRow({ expense: e, onDelete }: { expense: Expense; onDelete: (id: str
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "morning";
-  if (h < 17) return "afternoon";
-  return "evening";
-}
 
 function formatDate(iso: string): string {
   const today = new Date().toISOString().slice(0, 10);
