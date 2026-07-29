@@ -23,6 +23,16 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Ensure DB is initialized for serverless functions
+app.use(async (_req, _res, next) => {
+  try {
+    await initDb();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Health check
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -97,14 +107,18 @@ app.delete("/api/expenses/:id", async (req: Request, res: Response) => {
   }
 });
 
-// Initialize database and start server
-initDb()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Backend server running on http://localhost:${PORT}`);
+// Initialize database and start server (only locally)
+if (process.env.NODE_ENV !== "production") {
+  initDb()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`Backend server running on http://localhost:${PORT}`);
+      });
+    })
+    .catch((err: unknown) => {
+      console.error("Failed to initialize database:", err);
+      process.exit(1);
     });
-  })
-  .catch((err: unknown) => {
-    console.error("Failed to initialize database:", err);
-    process.exit(1);
-  });
+}
+
+export default app;

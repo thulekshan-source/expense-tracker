@@ -11,6 +11,10 @@ export async function initDb(): Promise<void> {
     );
   }
 
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+
   try {
     await mongoose.connect(uri);
     console.log("Connected successfully to MongoDB Atlas.");
