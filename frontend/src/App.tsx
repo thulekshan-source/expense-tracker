@@ -141,7 +141,7 @@ export function App() {
       <div className="splash">
         <div className="splash-logo">Ledger</div>
         <div className="spinner" />
-        <div className="splash-sub">Loading your finances…</div>
+        <div className="splash-sub">Connecting to server…</div>
       </div>
     );
   }

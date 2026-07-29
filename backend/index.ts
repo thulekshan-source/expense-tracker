@@ -4,10 +4,8 @@ import dotenv from 'dotenv';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const envPath = resolve(__dirname, '..', '.env');
-console.log('Loading .env from:', envPath);
 dotenv.config({ path: envPath });
-import fs from 'fs';
-if (!fs.existsSync(envPath)) { console.error('.env file not found at', envPath); }
+
 import cors from "cors";
 import {
   initDb,
@@ -18,13 +16,14 @@ import {
 } from "./db.js";
 import express, { Request, Response } from "express";
 import type { Expense } from "../frontend/src/types.js";
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
+// Health check
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
@@ -40,14 +39,29 @@ app.get("/api/expenses", async (_req: Request, res: Response) => {
   }
 });
 
+// POST import expenses (must be before /:id routes)
+app.post("/api/expenses/import", async (req: Request, res: Response) => {
+  try {
+    const expenses = req.body;
+    if (!Array.isArray(expenses)) {
+      res.status(400).json({ error: "Expected an array of expenses" });
+      return;
+    }
+    const imported = await importExpenses(expenses);
+    res.json(imported);
+  } catch (error) {
+    console.error("Error importing expenses:", error);
+    res.status(500).json({ error: "Failed to import expenses" });
+  }
+});
+
 // POST new expense
 app.post("/api/expenses", async (req: Request, res: Response) => {
   try {
     const { date, category, amount, note } = req.body;
     if (!date || !category || amount === undefined) {
-      return res
-        .status(400)
-        .json({ error: "Date, category, and amount are required" });
+      res.status(400).json({ error: "Date, category, and amount are required" });
+      return;
     }
 
     const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -73,7 +87,8 @@ app.delete("/api/expenses/:id", async (req: Request, res: Response) => {
     const id = String(req.params.id);
     const deleted = await deleteExpense(id);
     if (!deleted) {
-      return res.status(404).json({ error: "Expense not found" });
+      res.status(404).json({ error: "Expense not found" });
+      return;
     }
     res.json({ success: true, id });
   } catch (error) {
@@ -82,22 +97,7 @@ app.delete("/api/expenses/:id", async (req: Request, res: Response) => {
   }
 });
 
-// POST import expenses (bulk replace)
-app.post("/api/expenses/import", async (req: Request, res: Response) => {
-  try {
-    const expenses = req.body;
-    if (!Array.isArray(expenses)) {
-      return res.status(400).json({ error: "Expected an array of expenses" });
-    }
-    const imported = await importExpenses(expenses);
-    res.json(imported);
-  } catch (error) {
-    console.error("Error importing expenses:", error);
-    res.status(500).json({ error: "Failed to import expenses" });
-  }
-});
-
-// Initialize database and start Express server
+// Initialize database and start server
 initDb()
   .then(() => {
     app.listen(PORT, () => {
