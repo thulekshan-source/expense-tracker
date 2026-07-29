@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
-import { ExpenseModel } from "./models/Expense";
-import type { Expense } from "../frontend/src/types";
+import { ExpenseModel } from "./models/Expense.js";
+import type { IExpenseDocument } from "./models/Expense.js";
+import type { Expense } from "../frontend/src/types.js";
 
 export async function initDb(): Promise<void> {
   const uri = process.env.MONGODB_URI;
@@ -21,7 +22,7 @@ export async function initDb(): Promise<void> {
 
 export async function getAllExpenses(): Promise<Expense[]> {
   const docs = await ExpenseModel.find().sort({ date: -1, createdAt: -1 });
-  return docs.map((doc) => ({
+  return docs.map((doc: IExpenseDocument) => ({
     id: doc.id,
     date: doc.date,
     category: doc.category as Expense["category"],

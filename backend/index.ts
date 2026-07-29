@@ -15,9 +15,9 @@ import {
   addExpense,
   deleteExpense,
   importExpenses,
-} from "./db";
+} from "./db.js";
 import express, { Request, Response } from "express";
-import type { Expense } from "../frontend/src/types";
+import type { Expense } from "../frontend/src/types.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -70,7 +70,7 @@ app.post("/api/expenses", async (req: Request, res: Response) => {
 // DELETE expense by id
 app.delete("/api/expenses/:id", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const deleted = await deleteExpense(id);
     if (!deleted) {
       return res.status(404).json({ error: "Expense not found" });
@@ -104,7 +104,7 @@ initDb()
       console.log(`Backend server running on http://localhost:${PORT}`);
     });
   })
-  .catch((err) => {
+  .catch((err: unknown) => {
     console.error("Failed to initialize database:", err);
     process.exit(1);
   });

@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-import type { Expense } from "../../frontend/src/types";
+import type { Expense } from "../../frontend/src/types.js";
 
 export interface IExpenseDocument extends Omit<Expense, "id">, Document {
   id: string;
@@ -17,9 +17,8 @@ const ExpenseSchema = new Schema<IExpenseDocument>(
     timestamps: true,
     toJSON: {
       transform: (_doc, ret) => {
-        delete ret._id;
-        delete ret.__v;
-        return ret;
+        const { _id, __v, ...rest } = ret;
+        return rest;
       },
     },
   }
